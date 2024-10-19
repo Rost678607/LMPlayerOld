@@ -10,18 +10,19 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
-    private fun replaceFragment(fragment: Fragment) {  //   смена фрагментов в контейнере
-        supportFragmentManager.beginTransaction()
+    private fun replaceFragment(fragment: Fragment) { // метод замены фрагментов
+        supportFragmentManager
+            .beginTransaction()
             .replace(R.id.fragment_container, fragment)
             .commit()
     }
-
-    val navigation = findViewById<BottomNavigationView>(R.id.bottomNavigation)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+
+        val navigation = findViewById<BottomNavigationView>(R.id.bottomNavigation)
 
         navigation.setOnItemSelectedListener { item ->   // обработка нажатий кнопок меню
             when (item.itemId) {
