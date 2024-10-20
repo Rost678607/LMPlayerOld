@@ -1,12 +1,17 @@
 package com.softwareforpeople.lm
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
@@ -30,9 +35,22 @@ class MainActivity : AppCompatActivity() {
                 .commit()
         }
 
+        // хуй пойми зачем нужные переменные (но они нужные)
         val navigation = findViewById<BottomNavigationView>(R.id.bottomNavigation)
+        val player = Player()
+        val REQUEST_CODE = 1001
 
-        navigation.setOnItemSelectedListener { item ->   // обработка нажатий кнопок меню
+        // запрос разрешения на чтение аудиофайлов с телефона
+        // Android 13 и выше
+        if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) && (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED)) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_MEDIA_AUDIO), REQUEST_CODE)
+        // Android 12 и ниже
+        } else if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2 && (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE)
+        }
+
+        // обработка нажатий кнопок меню
+        navigation.setOnItemSelectedListener { item ->
             Log.d("Navigation", "Item selected: ${item.itemId}")
             when (item.itemId) {
                 R.id.menu_list -> {
