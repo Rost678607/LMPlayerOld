@@ -16,6 +16,8 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import android.media.MediaPlayer
 import android.widget.SeekBar
+import android.os.Handler
+import android.os.Looper
 
 class MainActivity : AppCompatActivity() {
 
@@ -112,7 +114,7 @@ class PlayFragment : Fragment() {
 
         // кнопки
         buttonPlay = view.findViewById(R.id.button_play)
-        //seekBar = view.findViewById(R.id.seekBar)
+        seekBar = view.findViewById(R.id.seekBar)
 
         // механика кнопки play
         buttonPlay.setOnClickListener {
@@ -131,7 +133,7 @@ class PlayFragment : Fragment() {
             }
         }
 
-        /*
+        // Механика SeekBar
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser && player != null) {
@@ -144,16 +146,17 @@ class PlayFragment : Fragment() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        // Update SeekBar progress periodically
+        // Обновление SeekBar во время проигрывания
         val handler = Handler(Looper.getMainLooper())
         handler.post(object : Runnable {
             override fun run() {
                 if (player != null && player!!.isPlaying) {
                     seekBar.progress = player!!.currentPosition
+                    seekBar.max = player!!.duration
                 }
-                handler.postDelayed(this, 1000) // Update every 1 second
+                handler.postDelayed(this, 1000) // обновление каждую секунду
             }
-        })*/
+        })
     }
 }
 
