@@ -14,9 +14,13 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import android.media.MediaPlayer
+import android.widget.SeekBar
 
 class MainActivity : AppCompatActivity() {
-    private fun replaceFragment(fragment: Fragment) { // метод замены фрагментов
+
+    // функция замены фрагментов
+    private fun replaceFragment(fragment: Fragment) {
         Log.d("Fragment", "Replacing fragment: ${fragment::class.java.simpleName}")
         supportFragmentManager
             .beginTransaction()
@@ -29,16 +33,20 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
+        // переменные
+
+
+        // непонятные переменные (но они нужные)
+        val REQUEST_CODE = 1001
+
+        // кнопки
+        val navigation = findViewById<BottomNavigationView>(R.id.bottomNavigation)
+
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
                 .add(R.id.fragment_container, ListFragment())
                 .commit()
         }
-
-        // хуй пойми зачем нужные переменные (но они нужные)
-        val navigation = findViewById<BottomNavigationView>(R.id.bottomNavigation)
-        val player = Player()
-        val REQUEST_CODE = 1001
 
         // запрос разрешения на чтение аудиофайлов с телефона
         // Android 13 и выше
@@ -82,7 +90,11 @@ class ListFragment : Fragment() { // фрагмент списка терков
     }
 }
 
-class PlayFragment : Fragment() { // фрагмент проигрывателя
+class PlayFragment : Fragment() {
+
+    private var player: MediaPlayer? = null
+    private lateinit var buttonPlay: View // Объявляем переменную для кнопки
+    private lateinit var seekBar: SeekBar // Объявляем переменную для SeekBar
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -90,6 +102,58 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
         savedInstanceState: Bundle?
     ): View? {
         return inflater.inflate(R.layout.activity_play, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // переменные
+        val currentSong = mutableListOf(R.raw.song)
+
+        // кнопки
+        buttonPlay = view.findViewById(R.id.button_play)
+        //seekBar = view.findViewById(R.id.seekBar)
+
+        // механика кнопки play
+        buttonPlay.setOnClickListener {
+            if (player == null) {
+                player = MediaPlayer.create(requireContext(), currentSong[0])
+                player!!.start()
+                buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+            } else {
+                if (player!!.isPlaying) {
+                    player!!.pause()
+                    buttonPlay.setBackgroundResource(R.drawable.baseline_play_circle_24)
+                } else {
+                    player!!.start()
+                    buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+                }
+            }
+        }
+
+        /*
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser && player != null) {
+                    player!!.seekTo(progress)
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // Update SeekBar progress periodically
+        val handler = Handler(Looper.getMainLooper())
+        handler.post(object : Runnable {
+            override fun run() {
+                if (player != null && player!!.isPlaying) {
+                    seekBar.progress = player!!.currentPosition
+                }
+                handler.postDelayed(this, 1000) // Update every 1 second
+            }
+        })*/
     }
 }
 
