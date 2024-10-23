@@ -19,36 +19,35 @@ import android.widget.SeekBar
 import android.os.Handler
 import android.os.Looper
 
+var currentSong = mutableListOf(R.raw.song) // текущий трек
+
 class MainActivity : AppCompatActivity() {
-
-    // функция замены фрагментов
-    private fun replaceFragment(fragment: Fragment) {
-        Log.d("Fragment", "Replacing fragment: ${fragment::class.java.simpleName}")
-        supportFragmentManager
-            .beginTransaction()
-            .replace(R.id.fragment_container, fragment)
-            .commit()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
         // переменные
-
+        var currentFragment: Fragment // текущий фрагмент
 
         // непонятные переменные (но они нужные)
-        val REQUEST_CODE = 1001
+        val REQUEST_CODE: Int = 1001 // нужно для запроса разрешения на чтение аудиофайлов с телефона
 
         // кнопки
         val navigation = findViewById<BottomNavigationView>(R.id.bottomNavigation)
 
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                .add(R.id.fragment_container, ListFragment())
-                .commit()
-        }
+        // инициализация фрагментов и выбор фрагмента по умолчанию
+        val listFragment = ListFragment()
+        val playFragment = PlayFragment()
+        val settingsFragment = SettingsFragment()
+        supportFragmentManager.beginTransaction()
+            .add(R.id.fragment_container, listFragment)
+            .add(R.id.fragment_container, playFragment)
+            .add(R.id.fragment_container, settingsFragment)
+            .hide(playFragment)
+            .hide(settingsFragment)
+            .commit()
+        currentFragment = listFragment
 
         // запрос разрешения на чтение аудиофайлов с телефона
         // Android 13 и выше
@@ -59,20 +58,32 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE)
         }
 
-        // обработка нажатий кнопок меню
+        // обработка нажатий кнопок меню (переключение между фрагментами)
         navigation.setOnItemSelectedListener { item ->
             Log.d("Navigation", "Item selected: ${item.itemId}")
             when (item.itemId) {
                 R.id.menu_list -> {
-                    replaceFragment(ListFragment())
+                    supportFragmentManager.beginTransaction()
+                        .hide(currentFragment)
+                        .show(listFragment)
+                        .commit()
+                    currentFragment = listFragment
                     true
                 }
                 R.id.menu_play -> {
-                    replaceFragment(PlayFragment())
+                    supportFragmentManager.beginTransaction()
+                        .hide(currentFragment)
+                        .show(playFragment)
+                        .commit()
+                    currentFragment = playFragment
                     true
                 }
                 R.id.menu_settings -> {
-                    replaceFragment(SettingsFragment())
+                    supportFragmentManager.beginTransaction()
+                        .hide(currentFragment)
+                        .show(settingsFragment)
+                        .commit()
+                    currentFragment = settingsFragment
                     true
                 }
                 else -> false
@@ -92,7 +103,7 @@ class ListFragment : Fragment() { // фрагмент списка терков
     }
 }
 
-class PlayFragment : Fragment() {
+class PlayFragment : Fragment() { // фрагмент проигрывателя
 
     private var player: MediaPlayer? = null
     private lateinit var buttonPlay: View // Объявляем переменную для кнопки
@@ -109,14 +120,11 @@ class PlayFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // переменные
-        val currentSong = mutableListOf(R.raw.song)
-
         // кнопки
         buttonPlay = view.findViewById(R.id.button_play)
         seekBar = view.findViewById(R.id.seekBar)
 
-        // механика кнопки play
+        // механика кнопки play (эти костыли надо будет переписать)
         buttonPlay.setOnClickListener {
             if (player == null) {
                 player = MediaPlayer.create(requireContext(), currentSong[0])
