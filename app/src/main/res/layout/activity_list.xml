@@ -7,10 +7,28 @@
     android:background="#1C1524">
 
     <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/music_list"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:background="#1C1524"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/add_song"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        app:layout_constraintBottom_toBottomOf="@+id/music_list"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.9"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/music_list"
+        app:layout_constraintVertical_bias="0.9"
+        app:srcCompat="@drawable/baseline_add_24"
+        android:contentDescription="Add song" />
 </androidx.constraintlayout.widget.ConstraintLayout>

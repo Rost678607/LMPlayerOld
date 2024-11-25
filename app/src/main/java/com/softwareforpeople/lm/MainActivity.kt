@@ -1,6 +1,8 @@
 package com.softwareforpeople.lm
 
 import android.Manifest
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -15,9 +17,13 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import android.media.MediaPlayer
+import android.net.Uri
 import android.widget.SeekBar
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import androidx.recyclerview.widget.RecyclerView
 
 var currentSong = mutableListOf(R.raw.song) // текущий трек
 
@@ -31,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         var currentFragment: Fragment // текущий фрагмент
 
         // непонятные переменные (но они нужные)
-        val REQUEST_CODE: Int = 1001 // нужно для запроса разрешения на чтение аудиофайлов с телефона
+        // val REQUEST_CODE: Int = 1001 // нужно для запроса разрешения на чтение аудиофайлов с телефона
 
         // кнопки
         val navigation = findViewById<BottomNavigationView>(R.id.bottomNavigation)
@@ -52,10 +58,10 @@ class MainActivity : AppCompatActivity() {
         // запрос разрешения на чтение аудиофайлов с телефона
         // Android 13 и выше
         if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) && (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED)) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_MEDIA_AUDIO), REQUEST_CODE)
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_MEDIA_AUDIO), 1001)
         // Android 12 и ниже
         } else if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2 && (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE)
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1001)
         }
 
         // обработка нажатий кнопок меню (переключение между фрагментами)
@@ -92,6 +98,7 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+@Suppress("UNREACHABLE_CODE")
 class ListFragment : Fragment() { // фрагмент списка терков
 
     override fun onCreateView(
@@ -100,6 +107,62 @@ class ListFragment : Fragment() { // фрагмент списка терков
         savedInstanceState: Bundle?
     ): View? {
         return inflater.inflate(R.layout.activity_list, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // кнопки
+        var addSongButton: FloatingActionButton = view.findViewById(R.id.add_song)
+
+        // обработка нажатия на кнопку добавления трека
+        addSongButton!!.setOnClickListener {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+            intent.addCategory(Intent.CATEGORY_OPENABLE)
+            intent.type = "audio/*"
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+            startActivityForResult(intent, REQUEST_CODE_PICK_AUDIO)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_PICK_AUDIO && resultCode == Activity.RESULT_OK) {
+            data?.data?.let { uri ->
+                addSongFromUri(uri)
+            } ?: run {
+                data?.clipData?.let { clipData ->
+                    for (i in 0 until clipData.itemCount) {
+                        val uri = clipData.getItemAt(i).uri
+                        addSongFromUri(uri)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun addSongFromUri(uri: Uri) {
+        val cursor = requireActivity().contentResolver.query(uri, null, null, null, null)
+        cursor?.let {
+
+            // инициализация адаптера и списка
+            val recyclerView = view?.findViewById<RecyclerView>(R.id.music_list) // Найдите ваш RecyclerView
+            val adapter = SongListAdapter() // Инициализируйте ваш адаптер
+            recyclerView?.adapter = adapter // Установите adapter для RecyclerView
+
+            if (it.moveToFirst()) {
+                val nameIndex = it.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME)
+                val artistIndex = it.getColumnIndex(MediaStore.Audio.Media.ARTIST)
+                val name = if (nameIndex != -1) it.getString(nameIndex) else "Unknown Song"
+                val artist = if (artistIndex != -1) it.getString(artistIndex) else "Unknown Artist"
+                adapter.addSong(song_list_item(name, artist))
+            }
+            it.close() // Закрываем курсор вручную
+        }
+    }
+
+    companion object {
+        private const val REQUEST_CODE_PICK_AUDIO = 1
     }
 }
 
