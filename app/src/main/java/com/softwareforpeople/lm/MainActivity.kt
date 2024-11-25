@@ -1,7 +1,9 @@
 package com.softwareforpeople.lm
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -26,6 +28,8 @@ import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 var currentSong = mutableListOf(R.raw.song) // текущий трек
 
@@ -102,6 +106,18 @@ class MainActivity : AppCompatActivity() {
 
 class ListFragment : Fragment() { // фрагмент списка терков
 
+    @SuppressLint("NotifyDataSetChanged")
+    private fun loadSongs() {
+        val sharedPreferences = requireActivity().getSharedPreferences("songs", Context.MODE_PRIVATE) // или this.getSharedPreferences(...) в активити
+        val gson = Gson()
+        val json = sharedPreferences.getString("songs_list", null)
+        val type = object : TypeToken<List<song_list_item>>() {}.type
+        val songs = gson.fromJson<List<song_list_item>>(json, type) ?: emptyList()
+        adapter.songs.clear() // Очищаем текущий список песен в адаптере
+        adapter.songs.addAll(songs) // Добавляем загруженные песни
+        adapter.notifyDataSetChanged() // Обновляем RecyclerView
+    }
+
     private lateinit var adapter: SongListAdapter
 
     override fun onCreateView(
@@ -118,10 +134,12 @@ class ListFragment : Fragment() { // фрагмент списка терков
         // кнопки
         val addSongButton: FloatingActionButton = view.findViewById(R.id.add_song)
 
-        adapter = SongListAdapter()
+        this.adapter = SongListAdapter(requireContext())
         val recyclerView = view.findViewById<RecyclerView>(R.id.music_list)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
+
+        loadSongs() // загрузка списка песен
 
         // обработка нажатия на кнопку добавления трека и добавление его в список
         addSongButton.setOnClickListener {
@@ -162,12 +180,12 @@ class ListFragment : Fragment() { // фрагмент списка терков
                 val nameIndex = it.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME)
                 val artistIndex = it.getColumnIndex(MediaStore.Audio.Media.ARTIST)
                 val name = if (nameIndex != -1) it.getString(nameIndex) else "Музыка"
-                val artist = if (artistIndex != -1) it.getString(artistIndex) else "нн"
+                val author = if (artistIndex != -1) it.getString(artistIndex) else "нн"
 
                 // Проверка на наличие трека в списке
-                val existingSong = adapter.songs.find { it.name == name && it.author == artist }
+                val existingSong = adapter.songs.find { it.name == name && it.author == author }
                 if (existingSong == null) {
-                    adapter.addSong(song_list_item(name, artist))
+                    adapter.addSong(song_list_item(name, author, uri.toString()))
                 } else {
                     // Трек уже есть в списке, можно показать сообщение пользователю
                     Toast.makeText(requireContext(), "Нахуя тебе два одинаковых трека даун", Toast.LENGTH_SHORT).show()
