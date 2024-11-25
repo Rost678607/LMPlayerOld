@@ -22,6 +22,8 @@ import android.widget.SeekBar
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
+import android.widget.Toast
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import androidx.recyclerview.widget.RecyclerView
 
@@ -98,8 +100,9 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-@Suppress("UNREACHABLE_CODE")
 class ListFragment : Fragment() { // фрагмент списка терков
+
+    private lateinit var adapter: SongListAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -113,18 +116,29 @@ class ListFragment : Fragment() { // фрагмент списка терков
         super.onViewCreated(view, savedInstanceState)
 
         // кнопки
-        var addSongButton: FloatingActionButton = view.findViewById(R.id.add_song)
+        val addSongButton: FloatingActionButton = view.findViewById(R.id.add_song)
 
-        // обработка нажатия на кнопку добавления трека
-        addSongButton!!.setOnClickListener {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-            intent.addCategory(Intent.CATEGORY_OPENABLE)
-            intent.type = "audio/*"
-            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+        adapter = SongListAdapter()
+        val recyclerView = view.findViewById<RecyclerView>(R.id.music_list)
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        recyclerView.adapter = adapter
+
+        // обработка нажатия на кнопку добавления трека и добавление его в список
+        addSongButton.setOnClickListener {
+            val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "audio/*"
+                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                }
+            } else {
+                Intent(Intent.ACTION_PICK, MediaStore.Audio.Media.EXTERNAL_CONTENT_URI)
+            }
             startActivityForResult(intent, REQUEST_CODE_PICK_AUDIO)
         }
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_CODE_PICK_AUDIO && resultCode == Activity.RESULT_OK) {
@@ -144,20 +158,22 @@ class ListFragment : Fragment() { // фрагмент списка терков
     private fun addSongFromUri(uri: Uri) {
         val cursor = requireActivity().contentResolver.query(uri, null, null, null, null)
         cursor?.let {
-
-            // инициализация адаптера и списка
-            val recyclerView = view?.findViewById<RecyclerView>(R.id.music_list) // Найдите ваш RecyclerView
-            val adapter = SongListAdapter() // Инициализируйте ваш адаптер
-            recyclerView?.adapter = adapter // Установите adapter для RecyclerView
-
             if (it.moveToFirst()) {
                 val nameIndex = it.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME)
                 val artistIndex = it.getColumnIndex(MediaStore.Audio.Media.ARTIST)
-                val name = if (nameIndex != -1) it.getString(nameIndex) else "Unknown Song"
-                val artist = if (artistIndex != -1) it.getString(artistIndex) else "Unknown Artist"
-                adapter.addSong(song_list_item(name, artist))
+                val name = if (nameIndex != -1) it.getString(nameIndex) else "Музыка"
+                val artist = if (artistIndex != -1) it.getString(artistIndex) else "нн"
+
+                // Проверка на наличие трека в списке
+                val existingSong = adapter.songs.find { it.name == name && it.author == artist }
+                if (existingSong == null) {
+                    adapter.addSong(song_list_item(name, artist))
+                } else {
+                    // Трек уже есть в списке, можно показать сообщение пользователю
+                    Toast.makeText(requireContext(), "Нахуя тебе два одинаковых трека даун", Toast.LENGTH_SHORT).show()
+                }
             }
-            it.close() // Закрываем курсор вручную
+            it.close()
         }
     }
 

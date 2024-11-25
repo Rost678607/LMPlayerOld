@@ -8,7 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 
 class SongListAdapter : RecyclerView.Adapter<SongListAdapter.SongViewHolder>() {
 
-    private val songs: MutableList<song_list_item> = mutableListOf()
+    internal val songs: MutableList<song_list_item> = mutableListOf()
 
     class SongViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val songName: TextView = itemView.findViewById(R.id.song_name)
@@ -16,9 +16,8 @@ class SongListAdapter : RecyclerView.Adapter<SongListAdapter.SongViewHolder>() {
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SongViewHolder {
-        val itemView = LayoutInflater.from(parent.context)
-            .inflate(R.layout.list_item, parent, false)
-        return SongViewHolder(itemView)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.list_item, parent, false)
+        return SongViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: SongViewHolder, position: Int) {
