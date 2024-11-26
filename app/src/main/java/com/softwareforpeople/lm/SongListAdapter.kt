@@ -1,13 +1,14 @@
 package com.softwareforpeople.lm
 
+import android.content.ContentValues
 import android.content.Context
-import android.net.Uri
+import android.provider.MediaStore
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
-import com.google.gson.Gson
 
 class SongListAdapter(private val context: Context) : RecyclerView.Adapter<SongListAdapter.SongViewHolder>() {
 
@@ -18,42 +19,46 @@ class SongListAdapter(private val context: Context) : RecyclerView.Adapter<SongL
         val songAuthor: TextView = itemView.findViewById(R.id.song_author)
     }
 
+    // создание нового ViewHolder
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SongViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.list_item, parent, false)
         return SongViewHolder(view)
     }
-
+    // привязка данных к ViewHolder
     override fun onBindViewHolder(holder: SongViewHolder, position: Int) {
         val currentSong = songs[position]
         holder.songName.text = currentSong.name
         holder.songAuthor.text = currentSong.author
-
-        holder.itemView.setOnClickListener {
-            val uri = Uri.parse(currentSong.uri)
-        }
+        // ... другие действия с данными песни ...
     }
 
+    // количество песен в списке
     override fun getItemCount(): Int {
         return songs.size
     }
 
+    // добавление песни в список
     fun addSong(song: song_list_item) {
-        songs.add(song)
-        notifyItemInserted(songs.size - 1)
-        saveSong()
+        val values = ContentValues().apply {
+            put(MediaStore.Audio.Media.TITLE, song.name)
+            put(MediaStore.Audio.Media.ARTIST, song.author)
+            // ... другие метаданные песни ...
+        }
+        val contentUri = context.contentResolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, values)
+
+        if (contentUri != null) {
+            songs.add(song.copy(contentUri = contentUri))
+            notifyItemInserted(songs.size - 1)
+        } else {
+            // Обработка ошибки добавления
+            Toast.makeText(context, "Иди нахуй даун!!!1!111! !11", Toast.LENGTH_SHORT).show()
+        }
     }
 
     fun removeSong(position: Int) {
+        val song = songs[position]
+        context.contentResolver.delete(song.contentUri, null, null)
         songs.removeAt(position)
         notifyItemRemoved(position)
-    }
-
-    private fun saveSong() {
-        val sharedPreferences = context.getSharedPreferences("songs", Context.MODE_PRIVATE) // Используем context адаптера
-        val editor = sharedPreferences.edit()
-        val gson = Gson()
-        val json = gson.toJson(songs)
-        editor.putString("songs_list", json)
-        editor.apply()
     }
 }

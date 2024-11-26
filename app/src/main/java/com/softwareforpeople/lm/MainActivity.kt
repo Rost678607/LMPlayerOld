@@ -31,7 +31,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
-var currentSong = mutableListOf(R.raw.song) // текущий трек
+var currentSong: Uri = Uri.EMPTY // текущий трек
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -185,7 +185,7 @@ class ListFragment : Fragment() { // фрагмент списка терков
                 // Проверка на наличие трека в списке
                 val existingSong = adapter.songs.find { it.name == name && it.author == author }
                 if (existingSong == null) {
-                    adapter.addSong(song_list_item(name, author, uri.toString()))
+                    adapter.addSong(song_list_item(name, author, uri))
                 } else {
                     // Трек уже есть в списке, можно показать сообщение пользователю
                     Toast.makeText(requireContext(), "Нахуя тебе два одинаковых трека даун", Toast.LENGTH_SHORT).show()
@@ -224,7 +224,7 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
         // механика кнопки play (эти костыли надо будет переписать)
         buttonPlay.setOnClickListener {
             if (player == null) {
-                player = MediaPlayer.create(requireContext(), currentSong[0])
+                player = MediaPlayer.create(requireContext(), currentSong)
                 player!!.start()
                 buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
             } else {
@@ -245,9 +245,7 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
                     player!!.seekTo(progress)
                 }
             }
-
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
