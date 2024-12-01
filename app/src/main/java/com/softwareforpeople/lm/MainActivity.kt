@@ -31,9 +31,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
-var currentSong = mutableListOf(R.raw.song) // текущий трек
+var currentSong: Uri = Uri.EMPTY // текущий трек
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), OnSongClickListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -102,6 +102,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    override fun onSongClick(songUri: Uri) {
+        currentSong = songUri
+    }
 }
 
 class ListFragment : Fragment() { // фрагмент списка терков
@@ -118,7 +121,7 @@ class ListFragment : Fragment() { // фрагмент списка терков
         adapter.notifyDataSetChanged() // Обновляем RecyclerView
     }
 
-    private lateinit var adapter: SongListAdapter
+    private lateinit var adapter: OnSongClickListener.SongListAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -134,7 +137,7 @@ class ListFragment : Fragment() { // фрагмент списка терков
         // кнопки
         val addSongButton: FloatingActionButton = view.findViewById(R.id.add_song)
 
-        this.adapter = SongListAdapter(requireContext())
+        this.adapter = OnSongClickListener.SongListAdapter(this.requireContext(), this.requireActivity() as OnSongClickListener)
         val recyclerView = view.findViewById<RecyclerView>(R.id.music_list)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
@@ -161,37 +164,15 @@ class ListFragment : Fragment() { // фрагмент списка терков
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_CODE_PICK_AUDIO && resultCode == Activity.RESULT_OK) {
             data?.data?.let { uri ->
-                addSongFromUri(uri)
+                adapter.addSongFromUri(uri)
             } ?: run {
                 data?.clipData?.let { clipData ->
                     for (i in 0 until clipData.itemCount) {
                         val uri = clipData.getItemAt(i).uri
-                        addSongFromUri(uri)
+                        adapter.addSongFromUri(uri)
                     }
                 }
             }
-        }
-    }
-
-    private fun addSongFromUri(uri: Uri) {
-        val cursor = requireActivity().contentResolver.query(uri, null, null, null, null)
-        cursor?.let {
-            if (it.moveToFirst()) {
-                val nameIndex = it.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME)
-                val artistIndex = it.getColumnIndex(MediaStore.Audio.Media.ARTIST)
-                val name = if (nameIndex != -1) it.getString(nameIndex) else "Музыка"
-                val author = if (artistIndex != -1) it.getString(artistIndex) else "нн"
-
-                // Проверка на наличие трека в списке
-                val existingSong = adapter.songs.find { it.name == name && it.author == author }
-                if (existingSong == null) {
-                    adapter.addSong(song_list_item(name, author, uri.toString()))
-                } else {
-                    // Трек уже есть в списке, можно показать сообщение пользователю
-                    Toast.makeText(requireContext(), "Нахуя тебе два одинаковых трека даун", Toast.LENGTH_SHORT).show()
-                }
-            }
-            it.close()
         }
     }
 
@@ -221,19 +202,24 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
         buttonPlay = view.findViewById(R.id.button_play)
         seekBar = view.findViewById(R.id.seekBar)
 
-        // механика кнопки play (эти костыли надо будет переписать)
+        // механика кнопки play (надо будет сделать переключение трека при изменении currentSong)
         buttonPlay.setOnClickListener {
-            if (player == null) {
-                player = MediaPlayer.create(requireContext(), currentSong[0])
-                player!!.start()
-                buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+            if (currentSong == Uri.EMPTY) {
+                Toast.makeText(requireContext(), "Выберите трек", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             } else {
-                if (player!!.isPlaying) {
-                    player!!.pause()
-                    buttonPlay.setBackgroundResource(R.drawable.baseline_play_circle_24)
-                } else {
+                if (player == null) {
+                    player = MediaPlayer.create(requireContext(), currentSong)
                     player!!.start()
                     buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+                } else {
+                    if (player!!.isPlaying) {
+                        player!!.pause()
+                        buttonPlay.setBackgroundResource(R.drawable.baseline_play_circle_24)
+                    } else {
+                        player!!.start()
+                        buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+                    }
                 }
             }
         }
