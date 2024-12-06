@@ -25,11 +25,13 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.widget.Toast
+import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import java.io.IOException
 
 var currentSong: Uri = Uri.EMPTY // текущий трек
 
@@ -164,6 +166,9 @@ class ListFragment : Fragment() { // фрагмент списка терков
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_CODE_PICK_AUDIO && resultCode == Activity.RESULT_OK) {
             data?.data?.let { uri ->
+                // Запрос постоянного разрешения
+                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                requireContext().contentResolver.takePersistableUriPermission(uri, takeFlags)
                 adapter.addSongFromUri(uri)
             } ?: run {
                 data?.clipData?.let { clipData ->
@@ -187,6 +192,26 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
     private lateinit var buttonPlay: View // Объявляем переменную для кнопки
     private lateinit var seekBar: SeekBar // Объявляем переменную для SeekBar
 
+    private val currentSongObserver = Observer<Uri> { newSongUri ->
+        // обновление плеера
+        if (player != null) {
+            if (player!!.isPlaying) {
+                player!!.stop()
+                player!!.reset()
+            }
+            player!!.release()
+            player = null
+            player = MediaPlayer.create(requireContext(), currentSong)
+            player!!.start()
+
+            // обновление ui
+
+        } else {
+            Toast.makeText(requireContext(), "Выберите трек", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -205,13 +230,33 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
         // механика кнопки play (надо будет сделать переключение трека при изменении currentSong)
         buttonPlay.setOnClickListener {
             if (currentSong == Uri.EMPTY) {
-                Toast.makeText(requireContext(), "Выберите трек", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+                // ...
             } else {
                 if (player == null) {
-                    player = MediaPlayer.create(requireContext(), currentSong)
-                    player!!.start()
-                    buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+                    // Проверяем, есть ли разрешение на доступ к Uri
+                    if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                        // Запрашиваем разрешение
+                        ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_READ_EXTERNAL_STORAGE)
+                        return@setOnClickListener // Выходим из слушателя, пока не получим разрешение
+                    }
+
+                    // Если разрешение есть, продолжаем
+                    player = MediaPlayer()
+                    try {
+                        val contentResolver = requireContext().contentResolver
+                        val fd = contentResolver.openFileDescriptor(currentSong, "r")
+                        player?.setDataSource(fd!!.fileDescriptor, 0, fd.statSize)
+                        fd!!.close()
+                        player?.prepare()
+                        player?.start()
+                        buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+                    } catch (e: IOException) {
+                        Log.e("PlayFragment", "Ошибка создания MediaPlayer: ${e.message}")
+                        Toast.makeText(requireContext(), "Ошибка воспроизведения", Toast.LENGTH_SHORT).show()
+                        player?.release()
+                        player = null
+                        return@setOnClickListener
+                    }
                 } else {
                     if (player!!.isPlaying) {
                         player!!.pause()
@@ -248,6 +293,23 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
                 handler.postDelayed(this, 1000) // обновление каждую секунду
             }
         })
+    }
+    @Deprecated("Deprecated in Java")
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_CODE_READ_EXTERNAL_STORAGE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Разрешение получено, можно воспроизводить музыку
+                buttonPlay.performClick() // Вызываем клик по кнопке Play, чтобы запустить воспроизведение
+            } else {
+                // Разрешение не получено, сообщаем пользователю
+                Toast.makeText(requireContext(), "Для воспроизведения музыки необходимо разрешение на доступ к хранилищу", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    companion object {
+        private const val REQUEST_CODE_READ_EXTERNAL_STORAGE = 123 // Выберите любое уникальное значение
     }
 }
 
