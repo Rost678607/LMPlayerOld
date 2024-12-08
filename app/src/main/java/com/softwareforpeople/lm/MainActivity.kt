@@ -25,6 +25,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.widget.Toast
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -34,15 +35,13 @@ import com.google.gson.reflect.TypeToken
 import java.io.IOException
 
 var currentSong: Uri = Uri.EMPTY // текущий трек
+private lateinit var currentFragment: Fragment // текущий фрагмент
 
 class MainActivity : AppCompatActivity(), OnSongClickListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-
-        // переменные
-        var currentFragment: Fragment // текущий фрагмент
 
         // непонятные переменные (но они нужные)
         // val REQUEST_CODE: Int = 1001 // нужно для запроса разрешения на чтение аудиофайлов с телефона
@@ -77,37 +76,35 @@ class MainActivity : AppCompatActivity(), OnSongClickListener {
             Log.d("Navigation", "Item selected: ${item.itemId}")
             when (item.itemId) {
                 R.id.menu_list -> {
-                    supportFragmentManager.beginTransaction()
-                        .hide(currentFragment)
-                        .show(listFragment)
-                        .commit()
-                    currentFragment = listFragment
+                    setFragment(listFragment)
                     true
                 }
                 R.id.menu_play -> {
-                    supportFragmentManager.beginTransaction()
-                        .hide(currentFragment)
-                        .show(playFragment)
-                        .commit()
+                    setFragment(playFragment)
                     currentFragment = playFragment
                     true
                 }
                 R.id.menu_settings -> {
-                    supportFragmentManager.beginTransaction()
-                        .hide(currentFragment)
-                        .show(settingsFragment)
-                        .commit()
-                    currentFragment = settingsFragment
+                    setFragment(settingsFragment)
                     true
                 }
                 else -> false
             }
         }
     }
+    fun setFragment(fragment: Fragment) {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, fragment)
+            .commit()
+        currentFragment = fragment
+    }
+
     override fun onSongClick(songUri: Uri) {
         currentSong = songUri
     }
 }
+
+//class currentSongObserver : java.util.Observable() {}
 
 class ListFragment : Fragment() { // фрагмент списка терков
 
