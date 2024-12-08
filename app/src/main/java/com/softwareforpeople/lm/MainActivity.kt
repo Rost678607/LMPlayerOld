@@ -25,15 +25,17 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.widget.Toast
+import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import java.io.IOException
 
 var currentSong: Uri = Uri.EMPTY // текущий трек
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), OnSongClickListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -65,7 +67,7 @@ class MainActivity : AppCompatActivity() {
         // Android 13 и выше
         if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) && (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED)) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_MEDIA_AUDIO), 1001)
-        // Android 12 и ниже
+            // Android 12 и ниже
         } else if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2 && (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1001)
         }
@@ -102,6 +104,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    override fun onSongClick(songUri: Uri) {
+        currentSong = songUri
+    }
 }
 
 class ListFragment : Fragment() { // фрагмент списка терков
@@ -118,7 +123,7 @@ class ListFragment : Fragment() { // фрагмент списка терков
         adapter.notifyDataSetChanged() // Обновляем RecyclerView
     }
 
-    private lateinit var adapter: SongListAdapter
+    private lateinit var adapter: OnSongClickListener.SongListAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -134,7 +139,7 @@ class ListFragment : Fragment() { // фрагмент списка терков
         // кнопки
         val addSongButton: FloatingActionButton = view.findViewById(R.id.add_song)
 
-        this.adapter = SongListAdapter(requireContext())
+        this.adapter = OnSongClickListener.SongListAdapter(this.requireContext(), this.requireActivity() as OnSongClickListener)
         val recyclerView = view.findViewById<RecyclerView>(R.id.music_list)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
@@ -161,37 +166,18 @@ class ListFragment : Fragment() { // фрагмент списка терков
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_CODE_PICK_AUDIO && resultCode == Activity.RESULT_OK) {
             data?.data?.let { uri ->
-                addSongFromUri(uri)
+                // Запрос постоянного разрешения
+                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                requireContext().contentResolver.takePersistableUriPermission(uri, takeFlags)
+                adapter.addSongFromUri(uri)
             } ?: run {
                 data?.clipData?.let { clipData ->
                     for (i in 0 until clipData.itemCount) {
                         val uri = clipData.getItemAt(i).uri
-                        addSongFromUri(uri)
+                        adapter.addSongFromUri(uri)
                     }
                 }
             }
-        }
-    }
-
-    private fun addSongFromUri(uri: Uri) {
-        val cursor = requireActivity().contentResolver.query(uri, null, null, null, null)
-        cursor?.let {
-            if (it.moveToFirst()) {
-                val nameIndex = it.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME)
-                val artistIndex = it.getColumnIndex(MediaStore.Audio.Media.ARTIST)
-                val name = if (nameIndex != -1) it.getString(nameIndex) else "Музыка"
-                val author = if (artistIndex != -1) it.getString(artistIndex) else "нн"
-
-                // Проверка на наличие трека в списке
-                val existingSong = adapter.songs.find { it.name == name && it.author == author }
-                if (existingSong == null) {
-                    adapter.addSong(song_list_item(name, author, uri))
-                } else {
-                    // Трек уже есть в списке, можно показать сообщение пользователю
-                    Toast.makeText(requireContext(), "Нахуя тебе два одинаковых трека даун", Toast.LENGTH_SHORT).show()
-                }
-            }
-            it.close()
         }
     }
 
@@ -205,6 +191,26 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
     private var player: MediaPlayer? = null
     private lateinit var buttonPlay: View // Объявляем переменную для кнопки
     private lateinit var seekBar: SeekBar // Объявляем переменную для SeekBar
+
+    private val currentSongObserver = Observer<Uri> { newSongUri ->
+        // обновление плеера
+        if (player != null) {
+            if (player!!.isPlaying) {
+                player!!.stop()
+                player!!.reset()
+            }
+            player!!.release()
+            player = null
+            player = MediaPlayer.create(requireContext(), currentSong)
+            player!!.start()
+
+            // обновление ui
+
+        } else {
+            Toast.makeText(requireContext(), "Выберите трек", Toast.LENGTH_SHORT).show()
+        }
+    }
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -221,19 +227,44 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
         buttonPlay = view.findViewById(R.id.button_play)
         seekBar = view.findViewById(R.id.seekBar)
 
-        // механика кнопки play (эти костыли надо будет переписать)
+        // механика кнопки play (надо будет сделать переключение трека при изменении currentSong)
         buttonPlay.setOnClickListener {
-            if (player == null) {
-                player = MediaPlayer.create(requireContext(), currentSong)
-                player!!.start()
-                buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+            if (currentSong == Uri.EMPTY) {
+                // ...
             } else {
-                if (player!!.isPlaying) {
-                    player!!.pause()
-                    buttonPlay.setBackgroundResource(R.drawable.baseline_play_circle_24)
+                if (player == null) {
+                    // Проверяем, есть ли разрешение на доступ к Uri
+                    if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                        // Запрашиваем разрешение
+                        ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_READ_EXTERNAL_STORAGE)
+                        return@setOnClickListener // Выходим из слушателя, пока не получим разрешение
+                    }
+
+                    // Если разрешение есть, продолжаем
+                    player = MediaPlayer()
+                    try {
+                        val contentResolver = requireContext().contentResolver
+                        val fd = contentResolver.openFileDescriptor(currentSong, "r")
+                        player?.setDataSource(fd!!.fileDescriptor, 0, fd.statSize)
+                        fd!!.close()
+                        player?.prepare()
+                        player?.start()
+                        buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+                    } catch (e: IOException) {
+                        Log.e("PlayFragment", "Ошибка создания MediaPlayer: ${e.message}")
+                        Toast.makeText(requireContext(), "Ошибка воспроизведения", Toast.LENGTH_SHORT).show()
+                        player?.release()
+                        player = null
+                        return@setOnClickListener
+                    }
                 } else {
-                    player!!.start()
-                    buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+                    if (player!!.isPlaying) {
+                        player!!.pause()
+                        buttonPlay.setBackgroundResource(R.drawable.baseline_play_circle_24)
+                    } else {
+                        player!!.start()
+                        buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+                    }
                 }
             }
         }
@@ -245,7 +276,9 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
                     player!!.seekTo(progress)
                 }
             }
+
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
@@ -260,6 +293,23 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
                 handler.postDelayed(this, 1000) // обновление каждую секунду
             }
         })
+    }
+    @Deprecated("Deprecated in Java")
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_CODE_READ_EXTERNAL_STORAGE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Разрешение получено, можно воспроизводить музыку
+                buttonPlay.performClick() // Вызываем клик по кнопке Play, чтобы запустить воспроизведение
+            } else {
+                // Разрешение не получено, сообщаем пользователю
+                Toast.makeText(requireContext(), "Для воспроизведения музыки необходимо разрешение на доступ к хранилищу", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    companion object {
+        private const val REQUEST_CODE_READ_EXTERNAL_STORAGE = 123 // Выберите любое уникальное значение
     }
 }
 
