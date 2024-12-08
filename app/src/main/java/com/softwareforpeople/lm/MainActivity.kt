@@ -227,44 +227,26 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
         buttonPlay = view.findViewById(R.id.button_play)
         seekBar = view.findViewById(R.id.seekBar)
 
+        player = MediaPlayer()
+
         // механика кнопки play (надо будет сделать переключение трека при изменении currentSong)
         buttonPlay.setOnClickListener {
             if (currentSong == Uri.EMPTY) {
-                // ...
+                Toast.makeText(requireContext(), "Выберете трек", Toast.LENGTH_SHORT).show()
             } else {
-                if (player == null) {
-                    // Проверяем, есть ли разрешение на доступ к Uri
-                    if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                        // Запрашиваем разрешение
-                        ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_READ_EXTERNAL_STORAGE)
-                        return@setOnClickListener // Выходим из слушателя, пока не получим разрешение
-                    }
-
-                    // Если разрешение есть, продолжаем
-                    player = MediaPlayer()
-                    try {
-                        val contentResolver = requireContext().contentResolver
-                        val fd = contentResolver.openFileDescriptor(currentSong, "r")
-                        player?.setDataSource(fd!!.fileDescriptor, 0, fd.statSize)
-                        fd!!.close()
-                        player?.prepare()
-                        player?.start()
-                        buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
-                    } catch (e: IOException) {
-                        Log.e("PlayFragment", "Ошибка создания MediaPlayer: ${e.message}")
-                        Toast.makeText(requireContext(), "Ошибка воспроизведения", Toast.LENGTH_SHORT).show()
-                        player?.release()
-                        player = null
-                        return@setOnClickListener
-                    }
+                // Проверяем, есть ли разрешение на доступ к Uri
+                if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    // Запрашиваем разрешение
+                    ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_READ_EXTERNAL_STORAGE)
+                    return@setOnClickListener // Выходим из слушателя, пока не получим разрешение
+                }
+                if (player!!.isPlaying) {
+                    player!!.reset()
+                    buttonPlay.setBackgroundResource(R.drawable.baseline_play_circle_24)
                 } else {
-                    if (player!!.isPlaying) {
-                        player!!.pause()
-                        buttonPlay.setBackgroundResource(R.drawable.baseline_play_circle_24)
-                    } else {
-                        player!!.start()
-                        buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
-                    }
+                    player = MediaPlayer.create(requireContext(), currentSong)
+                    player!!.start()
+                    buttonPlay.setBackgroundResource(R.drawable.baseline_pause_circle_24)
                 }
             }
         }
