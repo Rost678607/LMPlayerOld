@@ -34,7 +34,6 @@ import com.google.gson.reflect.TypeToken
 
 var currentSong: Uri = Uri.EMPTY // текущий трек
 private lateinit var currentFragment: Fragment // текущий фрагмент
-private lateinit var oldSong: Uri
 var player: MediaPlayer? = null
 
 class MainActivity : AppCompatActivity(), OnSongClickListener {
@@ -51,8 +50,6 @@ class MainActivity : AppCompatActivity(), OnSongClickListener {
 
         // кнопки
         navigation = findViewById<BottomNavigationView>(R.id.bottomNavigation)
-
-        oldSong = currentSong
 
         // инициализация фрагментов и выбор фрагмента по умолчанию
         listFragment = ListFragment()
@@ -116,18 +113,18 @@ class MainActivity : AppCompatActivity(), OnSongClickListener {
     }*/
 
     override fun onSongClick(songUri: Uri) {
-        currentSong = songUri
+        if (songUri != currentSong) {
+            currentSong = songUri
+            player?.release()
+            player = MediaPlayer.create(this, currentSong)
+            player!!.start()
+            playFragment.playButton.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+        } else if (!player!!.isPlaying) {
+            player!!.start()
+            playFragment.playButton.setBackgroundResource(R.drawable.baseline_pause_circle_24)
+        }
         navigation.setSelectedItemId(R.id.menu_play)
-        supportFragmentManager.beginTransaction()
-            .hide(currentFragment)
-            .show(playFragment)
-            .commit()
-        currentFragment = PlayFragment()
-        player?.release()
-        player = MediaPlayer.create(this, currentSong)
-        player!!.start()
-        playFragment.playButton.setBackgroundResource(R.drawable.baseline_pause_circle_24)
-        oldSong = currentSong
+        currentFragment = playFragment
     }
 }
 
