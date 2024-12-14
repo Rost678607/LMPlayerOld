@@ -7,10 +7,13 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
+
+data class song_list_item(val name: String, val author: String, val uri: String) {}
 
 interface OnSongClickListener {
     fun onSongClick(songUri: Uri)
@@ -23,6 +26,7 @@ interface OnSongClickListener {
         class SongViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val songName: TextView = itemView.findViewById(R.id.song_name)
             val songAuthor: TextView = itemView.findViewById(R.id.song_author)
+            val menuButton: ImageButton = itemView.findViewById(R.id.song_menu_button)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SongViewHolder {
@@ -41,6 +45,9 @@ interface OnSongClickListener {
                 val songUriString = currentSongUri.toString()
                 Log.d("SongListAdapter", "Song URI string: $songUriString")
                 listener.onSongClick(currentSongUri)
+                holder.menuButton.setOnClickListener {
+                    // потом допишу...
+                }
             }
         }
 
@@ -58,10 +65,9 @@ interface OnSongClickListener {
                     if (existingSong == null) {
                         addSong(song_list_item(name, author, uri.toString()))
                     } else {
-                        // Трек уже есть в списке, можно показать сообщение пользователю
                         Toast.makeText(
                             context,
-                            "Нахуя тебе два одинаковых трека даун",
+                            "Данный трек уже есть в списке",
                             Toast.LENGTH_SHORT
                         ).show()
                     }

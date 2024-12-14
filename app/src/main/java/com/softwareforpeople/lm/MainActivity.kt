@@ -247,7 +247,10 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
         // механика кнопки play (надо будет сделать переключение трека при изменении currentSong)
         playButton.setOnClickListener {
             if (player == null) {
-                Toast.makeText(requireContext(), "Выберете трек", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(),
+                    "Выберите трек",
+                    Toast.LENGTH_SHORT
+                ).show()
             } else {
                 // Проверяем, есть ли разрешение на доступ к Uri
                 if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -299,7 +302,11 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
                 playButton.performClick() // Вызываем клик по кнопке Play, чтобы запустить воспроизведение
             } else {
                 // Разрешение не получено, сообщаем пользователю
-                Toast.makeText(requireContext(), "Для воспроизведения музыки необходимо разрешение на доступ к хранилищу", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    "Для воспроизведения музыки необходимо разрешение на доступ к хранилищу",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
