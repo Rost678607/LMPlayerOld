@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.widget.PopupMenu
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 
@@ -26,7 +27,7 @@ interface OnSongClickListener {
         class SongViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val songName: TextView = itemView.findViewById(R.id.song_name)
             val songAuthor: TextView = itemView.findViewById(R.id.song_author)
-            val menuButton: ImageButton = itemView.findViewById(R.id.song_menu_button)
+            val menuButton: ImageButton = itemView.findViewById(R.id.more_actions)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SongViewHolder {
@@ -40,14 +41,31 @@ interface OnSongClickListener {
             holder.songName.text = currentSong.name
             holder.songAuthor.text = currentSong.author
 
-            holder.itemView.setOnClickListener {
+            holder.itemView.setOnClickListener { // нажатие на элемент списка
                 val currentSongUri = Uri.parse(songs[holder.adapterPosition].uri)
                 val songUriString = currentSongUri.toString()
                 Log.d("SongListAdapter", "Song URI string: $songUriString")
                 listener.onSongClick(currentSongUri)
-                holder.menuButton.setOnClickListener {
-                    // потом допишу...
+            }
+
+            holder.menuButton.setOnClickListener { // выпадающее меню
+                val popupMenu = PopupMenu(holder.itemView.context, holder.menuButton)
+                popupMenu.inflate(R.menu.list_more_actions)
+
+                popupMenu.setOnMenuItemClickListener { item ->
+                    when (item.itemId) {
+                        R.id.action_delete -> { // удаление трека
+                            removeSong(position)
+                            true
+                        }
+                        R.id.action_test -> {
+                            true
+                        }
+                        else -> false
+                    }
                 }
+
+                popupMenu.show() // отображение меню
             }
         }
 
@@ -83,15 +101,16 @@ interface OnSongClickListener {
         fun addSong(song: song_list_item) {
             songs.add(song)
             notifyItemInserted(songs.size - 1)
-            saveSong()
+            applyChanges()
         }
 
         fun removeSong(position: Int) {
             songs.removeAt(position)
             notifyItemRemoved(position)
+            applyChanges()
         }
 
-        private fun saveSong() {
+        private fun applyChanges() {
             val sharedPreferences = context.getSharedPreferences(
                 "songs",
                 Context.MODE_PRIVATE
