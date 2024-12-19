@@ -209,25 +209,6 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
     private lateinit var seekBar: SeekBar // Объявляем переменную для SeekBar
     lateinit var playButton : View // кнопка play
 
-    private val currentSongObserver = Observer<Uri> { newSongUri ->
-        // обновление плеера
-        if (player != null) {
-            if (player!!.isPlaying) {
-                player!!.stop()
-                player!!.reset()
-            }
-            player!!.release()
-            player = null
-            //player = MediaPlayer.create(requireContext(), currentSong)
-            player!!.start()
-
-            // обновление ui
-
-        } else {
-            Toast.makeText(requireContext(), "Выберите трек", Toast.LENGTH_SHORT).show()
-        }
-    }
-
 
     override fun onCreateView(
         inflater: LayoutInflater,
