@@ -42,6 +42,7 @@ interface OnSongClickListener {
             holder.songAuthor.text = currentSong.author
 
             holder.itemView.setOnClickListener { // нажатие на элемент списка
+                debugForEveryFart(holder.itemView.context, "выбран трек", true)
                 val currentSongUri = Uri.parse(songs[holder.adapterPosition].uri)
                 val songUriString = currentSongUri.toString()
                 Log.d("SongListAdapter", "Song URI string: $songUriString")
@@ -49,6 +50,7 @@ interface OnSongClickListener {
             }
 
             holder.menuButton.setOnClickListener { // выпадающее меню
+                debugForEveryFart(holder.menuButton.context, "открытие меню действий с треком...", true)
                 val popupMenu = PopupMenu(holder.itemView.context, holder.menuButton)
                 popupMenu.inflate(R.menu.list_more_actions)
 
@@ -83,11 +85,7 @@ interface OnSongClickListener {
                     if (existingSong == null) {
                         addSong(song_list_item(name, author, uri.toString()))
                     } else {
-                        Toast.makeText(
-                            context,
-                            "Данный трек уже есть в списке",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(context, "Данный трек уже есть в списке", Toast.LENGTH_SHORT).show()
                     }
                 }
                 it.close()
@@ -99,18 +97,23 @@ interface OnSongClickListener {
         }
 
         fun addSong(song: song_list_item) {
+            debugForEveryFart(context, "добавление трека...", true)
             songs.add(song)
             notifyItemInserted(songs.size - 1)
             applyChanges()
+            debugForEveryFart(context, "трек добавлен", false)
         }
 
         fun removeSong(position: Int) {
+            debugForEveryFart(context, "удаление трека...", true)
             songs.removeAt(position)
             notifyItemRemoved(position)
+            debugForEveryFart(context, "трек удален", false)
             applyChanges()
         }
 
         private fun applyChanges() {
+            debugForEveryFart(context, "сохранение изменений списка треков...", true)
             val sharedPreferences = context.getSharedPreferences(
                 "songs",
                 Context.MODE_PRIVATE
@@ -120,6 +123,7 @@ interface OnSongClickListener {
             val json = gson.toJson(songs)
             editor.putString("songs_list", json)
             editor.apply()
+            debugForEveryFart(context, "изменения списка треков сохранены", false)
         }
     }
 }
