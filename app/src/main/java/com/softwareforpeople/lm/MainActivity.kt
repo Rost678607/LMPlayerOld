@@ -24,6 +24,7 @@ import android.widget.SeekBar
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
+import android.widget.Switch
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -34,6 +35,15 @@ import com.google.gson.reflect.TypeToken
 var currentSong: Uri = Uri.EMPTY // текущий трек
 private lateinit var currentFragment: Fragment // текущий фрагмент
 var player: MediaPlayer? = null
+
+// отладка
+var debugToast: Boolean = false
+var debugLog: Boolean = false
+
+fun debugForEveryFart (context: Context, text: String, toast: Boolean) {
+    if (debugToast and toast) { Toast.makeText(context, text, Toast.LENGTH_SHORT).show() }
+    if (debugLog) { Log.d("Debug", text) }
+}
 
 class MainActivity : AppCompatActivity(), OnSongClickListener {
     lateinit var playFragment: PlayFragment
@@ -47,10 +57,13 @@ class MainActivity : AppCompatActivity(), OnSongClickListener {
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
+        debugForEveryFart(this, "создано main activity", false)
+
         // кнопки
         navigation = findViewById<BottomNavigationView>(R.id.bottomNavigation)
 
         // инициализация фрагментов и выбор фрагмента по умолчанию
+        debugForEveryFart(this, "инициализация фрагментов...", true)
         listFragment = ListFragment()
         playFragment = PlayFragment()
         settingsFragment = SettingsFragment()
@@ -63,7 +76,10 @@ class MainActivity : AppCompatActivity(), OnSongClickListener {
             .commit()
         currentFragment = listFragment
 
+        debugForEveryFart(this, "фрагменты инициализированы", false)
+
         // запрос разрешения на чтение аудиофайлов с телефона
+        debugForEveryFart(this, "проверка разрешения на чтение аудиофайлов", true)
         // Android 13 и выше
         if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) && (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED)) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_MEDIA_AUDIO), 1001)
@@ -72,11 +88,15 @@ class MainActivity : AppCompatActivity(), OnSongClickListener {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1001)
         }
 
+        debugForEveryFart(this, "разрешения проверены", false)
+
         // обработка нажатий кнопок меню (переключение между фрагментами)
+        debugForEveryFart(this, "инициализация слушателя нажатий навигации...", true)
         navigation.setOnItemSelectedListener { item ->
             Log.d("Navigation", "Item selected: ${item.itemId}")
             when (item.itemId) {
                 R.id.menu_list -> {
+                    debugForEveryFart(this, "переключение на фрагмент списка", true)
                     supportFragmentManager.beginTransaction()
                         .hide(currentFragment)
                         .show(listFragment)
@@ -85,6 +105,7 @@ class MainActivity : AppCompatActivity(), OnSongClickListener {
                     true
                 }
                 R.id.menu_play -> {
+                    debugForEveryFart(this, "переключение на фрагмент проигрывателя", true)
                     supportFragmentManager.beginTransaction()
                         .hide(currentFragment)
                         .show(playFragment)
@@ -93,6 +114,7 @@ class MainActivity : AppCompatActivity(), OnSongClickListener {
                     true
                 }
                 R.id.menu_settings -> {
+                    debugForEveryFart(this, "переключение на фрагмент настроек", true)
                     supportFragmentManager.beginTransaction()
                         .hide(currentFragment)
                         .show(settingsFragment)
@@ -103,10 +125,13 @@ class MainActivity : AppCompatActivity(), OnSongClickListener {
                 else -> false
             }
         }
+        debugForEveryFart(this, "инициализация слушателя нажатий панели навигации завершена", false)
     }
 
     override fun onSongClick(songUri: Uri) {
+        debugForEveryFart(this, "выбран какой-то трек", true)
         if (songUri != currentSong) {
+            debugForEveryFart(this, "до этого был выбран другой трек", false)
             currentSong = songUri
             player?.release()
             player = MediaPlayer.create(this, currentSong)
@@ -116,6 +141,7 @@ class MainActivity : AppCompatActivity(), OnSongClickListener {
             player!!.start()
             playFragment.playButton.setBackgroundResource(R.drawable.baseline_pause_circle_24)
         }
+        debugForEveryFart(this, "запущено воспроизведение", false)
         navigation.setSelectedItemId(R.id.menu_play)
         currentFragment = playFragment
     }
@@ -125,6 +151,7 @@ class ListFragment : Fragment() { // фрагмент списка терков
 
     @SuppressLint("NotifyDataSetChanged")
     private fun loadSongs() {
+        debugForEveryFart(requireContext(), "подгрузка треков...", true)
         val sharedPreferences = requireActivity().getSharedPreferences("songs", Context.MODE_PRIVATE) // или this.getSharedPreferences(...) в активити
         val gson = Gson()
         val json = sharedPreferences.getString("songs_list", null)
@@ -133,6 +160,7 @@ class ListFragment : Fragment() { // фрагмент списка терков
         adapter.songs.clear() // Очищаем текущий список песен в адаптере
         adapter.songs.addAll(songs) // Добавляем загруженные песни
         adapter.notifyDataSetChanged() // Обновляем RecyclerView
+        debugForEveryFart(requireContext(), "треки загружены", false)
     }
 
     private lateinit var adapter: OnSongClickListener.SongListAdapter
@@ -160,6 +188,7 @@ class ListFragment : Fragment() { // фрагмент списка терков
 
         // обработка нажатия на кнопку добавления трека и добавление его в список
         addSongButton.setOnClickListener {
+            debugForEveryFart(requireContext(), "нажата кнопка добавления трека", true)
             val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
@@ -171,11 +200,13 @@ class ListFragment : Fragment() { // фрагмент списка терков
             }
             startActivityForResult(intent, REQUEST_CODE_PICK_AUDIO)
         }
+        debugForEveryFart(requireContext(), "инициализирован фрагмент списка", true)
     }
 
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        debugForEveryFart(requireContext(), "получение результата выбора трека...", true)
         if (requestCode == REQUEST_CODE_PICK_AUDIO && resultCode == Activity.RESULT_OK) {
             data?.data?.let { uri ->
                 // Запрос постоянного разрешения
@@ -191,10 +222,11 @@ class ListFragment : Fragment() { // фрагмент списка терков
                 }
             }
         }
+        debugForEveryFart(requireContext(), "результат выбора трека получен", false)
     }
 
     companion object {
-        private const val REQUEST_CODE_PICK_AUDIO = 1
+        private const val REQUEST_CODE_PICK_AUDIO = 52
     }
 }
 
@@ -220,18 +252,20 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
 
         // механика кнопки play (надо будет сделать переключение трека при изменении currentSong)
         playButton.setOnClickListener {
+            debugForEveryFart(requireContext(), "нажата кнопка play", true)
             if (player == null) {
-                Toast.makeText(requireContext(),
-                    "Выберите трек",
-                    Toast.LENGTH_SHORT
-                ).show()
+                debugForEveryFart(requireContext(), "трека нет", false)
+                Toast.makeText(requireContext(), "Выберите трек", Toast.LENGTH_SHORT).show()
             } else if (player!!.isPlaying) {
+                debugForEveryFart(requireContext(), "трек играет", false)
                 player!!.pause()
                 playButton.setBackgroundResource(R.drawable.baseline_play_circle_24)
             } else {
+                debugForEveryFart(requireContext(), "трек не играет", false)
                 player!!.start()
                 playButton.setBackgroundResource(R.drawable.baseline_pause_circle_24)
             }
+            debugForEveryFart(requireContext(), "нажатие кнопки play успешно обработано", false)
         }
 
         // Механика SeekBar
@@ -258,6 +292,7 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
                 handler.postDelayed(this, 1000) // обновление каждую секунду
             }
         })
+        debugForEveryFart(requireContext(), "инициализирован фрагмент проигрывателя", true)
     }
     @Deprecated("Deprecated in Java")
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -290,5 +325,26 @@ class SettingsFragment : Fragment() { // фрагмент настроек
         savedInstanceState: Bundle?
     ): View? {
         return inflater.inflate(R.layout.activity_settings, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val toastSwitch: Switch = view.findViewById(R.id.debugToastSwitch)
+        val logSwitch: Switch = view.findViewById(R.id.debugLogSwitch)
+
+        // Устанавливаем начальные значения переключателей
+        toastSwitch.isChecked = debugToast
+        logSwitch.isChecked = debugLog
+
+        // Слушатели для переключателей
+        toastSwitch.setOnCheckedChangeListener { _, isChecked ->
+            debugToast = isChecked
+        }
+
+        logSwitch.setOnCheckedChangeListener { _, isChecked ->
+            debugLog = isChecked
+        }
+        debugForEveryFart(requireContext(), "инициализирован фрагмент настроек", true)
     }
 }
