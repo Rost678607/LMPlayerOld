@@ -25,7 +25,6 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.widget.Toast
-import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import androidx.recyclerview.widget.RecyclerView
@@ -105,12 +104,6 @@ class MainActivity : AppCompatActivity(), OnSongClickListener {
             }
         }
     }
-    /*fun setFragment(fragment: Fragment) {
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container, fragment)
-            .commit()
-        currentFragment = fragment
-    }*/
 
     override fun onSongClick(songUri: Uri) {
         if (songUri != currentSong) {
@@ -232,20 +225,12 @@ class PlayFragment : Fragment() { // фрагмент проигрывателя
                     "Выберите трек",
                     Toast.LENGTH_SHORT
                 ).show()
+            } else if (player!!.isPlaying) {
+                player!!.pause()
+                playButton.setBackgroundResource(R.drawable.baseline_play_circle_24)
             } else {
-                // Проверяем, есть ли разрешение на доступ к Uri
-                if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                    // Запрашиваем разрешение
-                    ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_READ_EXTERNAL_STORAGE)
-                    return@setOnClickListener // Выходим из слушателя, пока не получим разрешение
-                }
-                if (player!!.isPlaying) {
-                    player!!.pause()
-                    playButton.setBackgroundResource(R.drawable.baseline_play_circle_24)
-                } else {
-                    player!!.start()
-                    playButton.setBackgroundResource(R.drawable.baseline_pause_circle_24)
-                }
+                player!!.start()
+                playButton.setBackgroundResource(R.drawable.baseline_pause_circle_24)
             }
         }
 
