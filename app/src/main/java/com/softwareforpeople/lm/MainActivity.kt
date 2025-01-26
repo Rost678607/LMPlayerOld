@@ -1,4 +1,4 @@
-package com.softwareforpeople.lm
+/*package com.softwareforpeople.lm
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -347,4 +347,4 @@ class SettingsFragment : Fragment() { // фрагмент настроек
         }
         debugForEveryFart(requireContext(), "инициализирован фрагмент настроек", true)
     }
-}
+}*/

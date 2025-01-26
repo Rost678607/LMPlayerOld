@@ -1,4 +1,4 @@
-package com.softwareforpeople.lm
+/*package com.softwareforpeople.lm
 
 import android.content.Context
 import android.net.Uri
@@ -126,4 +126,4 @@ interface OnSongClickListener {
             debugForEveryFart(context, "изменения списка треков сохранены", false)
         }
     }
-}
+}*/
