@@ -1,4 +1,4 @@
-/*package com.softwareforpeople.lm
+package com.softwareforpeople.lm
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -29,8 +29,40 @@ import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import androidx.recyclerview.widget.RecyclerView
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+
+data class Playlist(
+    val name: String,
+    val tracks: List<Track>
+)
+
+data class Track(
+    val title: String,
+    val artist: String,
+    val uri: String
+)
+
+fun addTrackToPlaylist(playlist: Playlist, track: Track): Playlist{
+    return playlist.copy(tracks = playlist.tracks + track)
+}
+
+fun removeTrackFromPlaylist(playlist: Playlist, track: Track): Playlist{
+    return playlist.copy(tracks = playlist.tracks - track)
+}
+
+@Entity
+data class PlaylistEntity(
+    @PrimaryKey val id: Int,
+    val name: String,
+    val trackIds: List<Int>
+)
+
+val myPlaylist = Playlist("Мой плейлист", listOf())
+val newTrack = Track("Песня", "Исполнитель", "uri_песни")
+val updatedPlaylist = addTrackToPlaylist(myPlaylist, newTrack)
 
 var currentSong: Uri = Uri.EMPTY // текущий трек
 private lateinit var currentFragment: Fragment // текущий фрагмент
@@ -148,6 +180,9 @@ class MainActivity : AppCompatActivity(), OnSongClickListener {
 }
 
 class ListFragment : Fragment() { // фрагмент списка терков
+
+    // Добавление трека
+    //val updatedPlaylist = addTrackToPlaylist(myPlaylist, newTrack)
 
     @SuppressLint("NotifyDataSetChanged")
     private fun loadSongs() {
